@@ -5,11 +5,13 @@ import com.winter.annotation.PostSnowball;
 import java.lang.reflect.Method;
 import com.winter.registry.SnowballRegistry;
 import com.winter.scanner.ClassScanner;
-
+import com.winter.proxy.ProxyFactory;
 import java.lang.reflect.Constructor;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
 public class WinterContext {
 
     private final SnowballRegistry registry;
@@ -17,13 +19,14 @@ public class WinterContext {
     private final String basePackage;
     private final Set<Class<?>> creatingSnowballs;
     private final Set<Object> initializedSnowballs;
-
+    private final Map<Class<?>, Class<?>> implementations;
     public WinterContext(String basePackage) {
         this.basePackage = basePackage;
         this.registry = new SnowballRegistry();
         this.scanner = new ClassScanner();
         this.creatingSnowballs = new HashSet<>();
         this.initializedSnowballs = new HashSet<>();
+        this.implementations = new HashMap<>();
     }
 
     public void start() {
@@ -36,6 +39,8 @@ public class WinterContext {
             if (!clazz.isAnnotationPresent(Snowball.class)) {
                 continue;
             }
+
+            registerImplementations(clazz);
 
             createSnowball(clazz);
         }
@@ -79,30 +84,28 @@ public class WinterContext {
                 Class<?> dependencyType =
                         parameterTypes[i];
 
-                // Dependency باید Snowball باشد
-                if (!dependencyType.isAnnotationPresent(
-                        Snowball.class)) {
+                Object dependency =
+                        resolveDependency(dependencyType);
 
-                    throw new RuntimeException(
-                            "Dependency is not a Snowball: "
-                                    + dependencyType.getName()
-                    );
-                }
-
-                // ساخت یا دریافت dependency
-                dependencies[i] =
-                        createSnowball(dependencyType);
+                dependencies[i] = dependency;
             }
 
-            // ساخت Snowball با dependencyهای resolve شده
             Object snowball =
                     constructor.newInstance(dependencies);
 
-            registry.register(clazz, snowball);
-
             initializeSnowball(snowball);
 
-            return snowball;
+            Object exposedSnowball = snowball;
+
+            if (clazz.getInterfaces().length > 0) {
+
+                exposedSnowball =
+                        ProxyFactory.createProxy(snowball);
+            }
+
+            registry.register(clazz, exposedSnowball);
+
+            return exposedSnowball;
 
         } catch (Exception e) {
 
@@ -183,5 +186,41 @@ public class WinterContext {
 
         // فقط بعد از اجرای موفق callback ثبتش کن
         initializedSnowballs.add(snowball);
+    }
+    private void registerImplementations(Class<?> clazz) {
+
+        for (Class<?> interfaceType :
+                clazz.getInterfaces()) {
+
+            implementations.put(
+                    interfaceType,
+                    clazz
+            );
+        }
+    }
+    private Object resolveDependency(Class<?> dependencyType) {
+
+        Object existing =
+                registry.get(dependencyType);
+
+        if (existing != null) {
+            return existing;
+        }
+
+        if (dependencyType.isAnnotationPresent(Snowball.class)) {
+            return createSnowball(dependencyType);
+        }
+
+        Class<?> implementation =
+                implementations.get(dependencyType);
+
+        if (implementation == null) {
+            throw new RuntimeException(
+                    "No Snowball implementation found for: "
+                            + dependencyType.getName()
+            );
+        }
+
+        return createSnowball(implementation);
     }
 }

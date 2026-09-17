@@ -2,20 +2,18 @@ package com.winter.example;
 
 import com.winter.context.WinterContext;
 
+public class WinterProxyTest {
 
-public class Main {
     public static void main(String[] args) {
+
         WinterContext context =
                 new WinterContext("com.winter.example");
 
         context.start();
 
-        CatService cat =
-                context.getSnowball(CatService.class);
+        ZooService zoo =
+                context.getSnowball(ZooService.class);
 
-        cat.meow();
-
-
+        zoo.testCat();
     }
-
 }

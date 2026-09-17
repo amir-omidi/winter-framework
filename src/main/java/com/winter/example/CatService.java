@@ -4,7 +4,7 @@ import com.winter.annotation.Snowball;
 import com.winter.example.services.FoodService;
 
 @Snowball
-public class CatService {
+public class CatService implements CatOperations {
 
     private final FoodService foodService;
 
@@ -12,6 +12,7 @@ public class CatService {
         this.foodService = foodService;
     }
 
+    @Override
     public void meow() {
         System.out.println("Meow!");
         foodService.feed();
