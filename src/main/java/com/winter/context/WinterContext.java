@@ -4,6 +4,7 @@ import com.winter.annotation.Snowball;
 import com.winter.annotation.PostSnowball;
 import java.lang.reflect.Method;
 import com.winter.registry.SnowballRegistry;
+import com.winter.logging.WinterLogger;
 import com.winter.scanner.ClassScanner;
 import com.winter.proxy.ProxyFactory;
 import java.lang.reflect.Constructor;
@@ -20,6 +21,7 @@ public class WinterContext {
     private final Set<Class<?>> creatingSnowballs;
     private final Set<Object> initializedSnowballs;
     private final Map<Class<?>, Class<?>> implementations;
+    private final WinterLogger logger;
     public WinterContext(String basePackage) {
         this.basePackage = basePackage;
         this.registry = new SnowballRegistry();
@@ -27,19 +29,28 @@ public class WinterContext {
         this.creatingSnowballs = new HashSet<>();
         this.initializedSnowballs = new HashSet<>();
         this.implementations = new HashMap<>();
+        this.logger = new WinterLogger(true);
     }
 
     public void start() {
-
+        logger.startup();
+        logger.log("Starting Winter...");
+        logger.log("Scanning package: " + basePackage);
         List<Class<?>> classes =
                 scanner.scan(basePackage);
 
+        logger.log(
+                "Found " + classes.size() + " classes"
+        );
         for (Class<?> clazz : classes) {
 
             if (!clazz.isAnnotationPresent(Snowball.class)) {
                 continue;
             }
-
+            logger.log(
+                    "Found Snowball: "
+                            + clazz.getName()
+            );
             registerImplementations(clazz);
 
             createSnowball(clazz);
@@ -47,7 +58,10 @@ public class WinterContext {
     }
 
     private Object createSnowball(Class<?> clazz) {
-
+        logger.log(
+                "Creating Snowball: "
+                        + clazz.getName()
+        );
         // اگر قبلاً ساخته شده، همان instance را برگردان
         Object existing = registry.get(clazz);
 
@@ -76,6 +90,7 @@ public class WinterContext {
             Class<?>[] parameterTypes =
                     constructor.getParameterTypes();
 
+
             Object[] dependencies =
                     new Object[parameterTypes.length];
 
@@ -83,7 +98,10 @@ public class WinterContext {
 
                 Class<?> dependencyType =
                         parameterTypes[i];
-
+                logger.log(
+                        "Resolving dependency: "
+                                + dependencyType.getName()
+                );
                 Object dependency =
                         resolveDependency(dependencyType);
 
@@ -98,7 +116,10 @@ public class WinterContext {
             Object exposedSnowball = snowball;
 
             if (clazz.getInterfaces().length > 0) {
-
+                logger.log(
+                        "Creating proxy for: "
+                                + clazz.getName()
+                );
                 exposedSnowball =
                         ProxyFactory.createProxy(snowball);
             }
@@ -160,7 +181,10 @@ public class WinterContext {
         }
 
         Class<?> clazz = snowball.getClass();
-
+        logger.log(
+                "Initializing Snowball: "
+                        + clazz.getName()
+        );
         for (Method method :
                 clazz.getDeclaredMethods()) {
 
@@ -172,6 +196,10 @@ public class WinterContext {
             try {
 
                 method.setAccessible(true);
+                logger.log(
+                        "Executing @PostSnowball: "
+                                + method.getName()
+                );
                 method.invoke(snowball);
 
             } catch (Exception e) {
@@ -199,7 +227,10 @@ public class WinterContext {
         }
     }
     private Object resolveDependency(Class<?> dependencyType) {
-
+        logger.log(
+                "Looking for dependency: "
+                        + dependencyType.getName()
+        );
         Object existing =
                 registry.get(dependencyType);
 
@@ -213,7 +244,12 @@ public class WinterContext {
 
         Class<?> implementation =
                 implementations.get(dependencyType);
-
+        logger.log(
+                "Resolved interface "
+                        + dependencyType.getName()
+                        + " -> "
+                        + implementation.getName()
+        );
         if (implementation == null) {
             throw new RuntimeException(
                     "No Snowball implementation found for: "
