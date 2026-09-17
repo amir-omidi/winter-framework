@@ -10,8 +10,8 @@ public class Main {
 
         context.start();
 
-        CatService cat =
-                context.getSnowball(CatService.class);
+        CatOperations cat =
+                context.getSnowball(CatOperations.class);
 
         cat.meow();
 

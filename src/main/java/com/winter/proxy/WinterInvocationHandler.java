@@ -1,9 +1,18 @@
 package com.winter.proxy;
 
+import com.winter.aop.AfterInterceptor;
+import com.winter.aop.AroundInterceptor;
+import com.winter.aop.BeforeInterceptor;
+import com.winter.aop.InterceptorChain;
+import com.winter.aop.MethodInterceptor;
+import com.winter.aop.MethodInvocation;
+
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.util.List;
 
-public class WinterInvocationHandler implements InvocationHandler {
+public class WinterInvocationHandler
+        implements InvocationHandler {
 
     private final Object target;
 
@@ -18,17 +27,24 @@ public class WinterInvocationHandler implements InvocationHandler {
             Object[] args
     ) throws Throwable {
 
-        System.out.println(
-                "[Winter] Before: " + method.getName()
-        );
+        List<MethodInterceptor> interceptors =
+                List.of(
+                        new AroundInterceptor(),
+                        new BeforeInterceptor(),
+                        new AfterInterceptor()
+                );
 
-        Object result =
-                method.invoke(target, args);
+        InterceptorChain chain =
+                new InterceptorChain(interceptors);
 
-        System.out.println(
-                "[Winter] After: " + method.getName()
-        );
+        MethodInvocation invocation =
+                new MethodInvocation(
+                        target,
+                        method,
+                        args,
+                        chain
+                );
 
-        return result;
+        return invocation.proceed();
     }
 }
