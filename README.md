@@ -1,6 +1,6 @@
 <div align="center">
 
-<pre>
+<pre style="color: #87CEEB;">
 ██╗    ██╗██╗███╗   ██╗████████╗███████╗██████╗
 ██║    ██║██║████╗  ██║╚══██╔══╝██╔════╝██╔══██╗
 ██║ █╗ ██║██║██╔██╗ ██║   ██║   █████╗  ██████╔╝
@@ -9,6 +9,7 @@
  ╚══╝╚══╝ ╚═╝╚═╝  ╚═══╝   ╚═╝   ╚══════╝╚═╝  ╚═╝
 </pre>
 
+</div>
 **Winter Framework**
 
 *A lightweight Java framework built from scratch to understand how frameworks work internally.*
