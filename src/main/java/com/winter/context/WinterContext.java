@@ -13,6 +13,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.HashMap;
 import java.util.Map;
+import com.winter.exception.CircularDependencyException;
+import com.winter.exception.DependencyException;
+import com.winter.exception.SnowballCreationException;
 public class WinterContext {
 
     private final SnowballRegistry registry;
@@ -62,31 +65,31 @@ public class WinterContext {
                 "Creating Snowball: "
                         + clazz.getName()
         );
-        // اگر قبلاً ساخته شده، همان instance را برگردان
+
         Object existing = registry.get(clazz);
 
         if (existing != null) {
             return existing;
         }
 
-        // تشخیص Circular Dependency
         if (creatingSnowballs.contains(clazz)) {
-            throw new RuntimeException(
+
+            throw new CircularDependencyException(
                     "Circular dependency detected: "
                             + clazz.getName()
             );
         }
 
-        // علامت بزن که این Snowball در حال ساخته شدن است
+
         creatingSnowballs.add(clazz);
 
         try {
 
-            // پیدا کردن constructor مناسب
+
             Constructor<?> constructor =
                     findConstructor(clazz);
 
-            // پیدا کردن dependencyها
+
             Class<?>[] parameterTypes =
                     constructor.getParameterTypes();
 
@@ -130,7 +133,7 @@ public class WinterContext {
 
         } catch (Exception e) {
 
-            throw new RuntimeException(
+            throw new SnowballCreationException(
                     "Could not create Snowball: "
                             + clazz.getName(),
                     e
@@ -138,7 +141,7 @@ public class WinterContext {
 
         } finally {
 
-            // ساخت تمام شد؛ دیگر در حال ساخت نیست
+
             creatingSnowballs.remove(clazz);
         }
     }
@@ -175,7 +178,7 @@ public class WinterContext {
 
     private void initializeSnowball(Object snowball) {
 
-        // اگر قبلاً lifecycle آن اجرا شده، دوباره اجرا نکن
+
         if (initializedSnowballs.contains(snowball)) {
             return;
         }
@@ -212,7 +215,7 @@ public class WinterContext {
             }
         }
 
-        // فقط بعد از اجرای موفق callback ثبتش کن
+
         initializedSnowballs.add(snowball);
     }
     private void registerImplementations(Class<?> clazz) {
@@ -251,7 +254,8 @@ public class WinterContext {
                         + implementation.getName()
         );
         if (implementation == null) {
-            throw new RuntimeException(
+
+            throw new DependencyException(
                     "No Snowball implementation found for: "
                             + dependencyType.getName()
             );
